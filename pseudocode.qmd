@@ -1,6 +1,8 @@
 ---
 title: "Pseudocode: Craps Simulation"
 ---
+Author: " C. Martin Konou"
+
 
 # Instructor Comments
 
@@ -21,7 +23,6 @@ You can see the full script [here](deps/ChatGPT Pseudocode.html) (it goes a bit 
 Note that this pseudocode seems to be relatively Pythonic. 
 You will have the opportunity to write (somewhat different) pseudocode later, but for now, work with this pseudocode to develop an understanding of the game.
 
-```{}
 function playCraps():
     while true:
         // Roll the dice
@@ -90,14 +91,14 @@ function playAgain():
     // Ask the player if they want to play again
     // Return True if the player wants to play again, False otherwise
 
-```
-
 ## Flowchart {#sec-flowchart}
 
 Create a flowchart illustrating how the game unfolds, using the function names provided in the ChatGPT code. 
 Include this as a PNG file in the repository and link to it here.
 
 <!-- Your image should go here. Use markdown syntax to add the image and give it a useful caption -->
+
+![Craps Game Flow Chart](CrapsGameFlowchart.png)
 
 ## Single game data structure {#sec-single-game-data}
 
@@ -110,13 +111,15 @@ Hint: Each roll of the 2 dice should be a row.
 
 <!-- Here you should include either a picture of your sketch or a markdown table -->
 
+![Game data structure Table](Game data structure Table.png)
+
 ## Summary data structure {#sec-game-summary-data}
 
 Draw/sketch a summary tabular data structure to store summary information from a single game of craps.    
 Hint: Each game of craps should yield a single row in your table.
 
 <!-- Here you should include either a picture of your sketch or a markdown table -->
-
+![Craps Game Summary](CrapsGameSummary.png)
 
 # Simulating a game of craps {#sec-simulation-pseudocode}
 
@@ -131,20 +134,135 @@ You must have a function to simulate a single craps game, `simulate_craps_game`,
 - `outcome` (win, loss, or continue)
 
 You may have additional columns if you want.
+```{r}
+simulate_craps_game <- function() {
+  # Initialize variables
+  roll_id <- 0
+  point <- NA
+  game_over <- FALSE
+  
+  # Data frame to store roll data
+  game_data <- data.frame(
+    id = integer(),      # Roll number
+    roll = integer(),    # Total roll of the dice
+    outcome = character(), # "win", "loss", or "continue"
+    stringsAsFactors = FALSE
+  )
+  
+  # Simulate Come-Out Roll
+  while (!game_over) {
+    roll_id <- roll_id + 1
+    roll <- sum(sample(1:6, 2, replace = TRUE))  # Roll two dice
+    
+    if (is.na(point)) {  # Come-Out Roll phase
+      if (roll %in% c(7, 11)) {  # Immediate win
+        game_data <- rbind(game_data, data.frame(id = roll_id, roll = roll, outcome = "win"))
+        game_over <- TRUE
+      } else if (roll %in% c(2, 3, 12)) {  # Immediate loss
+        game_data <- rbind(game_data, data.frame(id = roll_id, roll = roll, outcome = "loss"))
+        game_over <- TRUE
+      } else {  # Point is established
+        point <- roll
+        game_data <- rbind(game_data, data.frame(id = roll_id, roll = roll, outcome = "continue"))
+      }
+    } else {  # Point Roll phase
+      if (roll == point) {  # Win by matching the point
+        game_data <- rbind(game_data, data.frame(id = roll_id, roll = roll, outcome = "win"))
+        game_over <- TRUE
+      } else if (roll == 7) {  # Loss by rolling a 7
+        game_data <- rbind(game_data, data.frame(id = roll_id, roll = roll, outcome = "loss"))
+        game_over <- TRUE
+      } else {  # Continue rolling
+        game_data <- rbind(game_data, data.frame(id = roll_id, roll = roll, outcome = "continue"))
+      }
+    }
+  }
+  
+  return(game_data)
+}
 
+# Test the function
+single_game <- simulate_craps_game()
+print(single_game)
+```
 **Requirement 2:**    
 You must include a summary function named `summarize_craps_game` that takes the data frame returned by `simulate_craps_game` and generates a single row with the following columns:
 
 - `n_rolls`, the number of times the dice were rolled in the game,
 - `outcome`, whether the game was won or lost
 - `point`, the total of the dice on the first roll, if the game continued past the first roll, and NA otherwise.
+```{r}
+summarize_craps_game <- function(game_data) {
+  # Calculate the total number of rolls
+  n_rolls <- nrow(game_data)
+  
+  # Determine the game outcome (final row outcome)
+  outcome <- tail(game_data$outcome, 1)
+  
+  # Extract the point if it was established (first roll with "continue")
+  point <- if ("continue" %in% game_data$outcome) {
+    game_data$roll[game_data$outcome == "continue"][1]
+  } else {
+    NA
+  }
+  
+  # Create a summary data frame
+  summary <- data.frame(
+    n_rolls = n_rolls,
+    outcome = outcome,
+    point = point,
+    stringsAsFactors = FALSE
+  )
+  
+  return(summary)
+}
 
+# Test the summarize function
+single_game <- simulate_craps_game()      # Simulate a single game
+game_summary <- summarize_craps_game(single_game)  # Summarize the game
+print(single_game)                       # Print the game rolls
+print(game_summary)                      # Print the summary
+
+```
 **Requirement 3:**    
 You must include a function to run your simulation, `run_craps_simulation(N)` that takes a single integer argument `N` which determines the number of games which will be played. 
 
 Think carefully about how you want to structure your code - do you want to return the full results for each game and then summarize, or do you want to summarize before you return the full results?
 
+```{r}
+run_craps_simulation <- function(N) {
+  # Initialize an empty data frame for game summaries
+  results <- data.frame(
+    game_id = integer(),
+    n_rolls = integer(),
+    outcome = character(),
+    point = integer(),
+    stringsAsFactors = FALSE
+  )
+  
+  # Simulate N games
+  for (i in 1:N) {
+    game_data <- simulate_craps_game()        # Simulate a single game
+    summary <- summarize_craps_game(game_data) # Summarize the game
+    
+    # Add the game ID to the summary
+    summary$game_id <- i
+    
+    # Append the summary to results
+    results <- rbind(results, summary)
+  }
+  
+  return(results)
+}
 
+# Test the simulation
+N <- 10
+simulation_results <- run_craps_simulation(N)
+
+# Print the first few summaries
+print(simulation_results)
+
+```
 ## Planning Helper Functions {#sec-helper}
 
 Consider helper functions you will need to write to implement the game of craps. 
@@ -152,63 +270,117 @@ For each function, define the input, output, and provide a comment to explain wh
 
 Here is pseudocode for a function that simulates the roll of the dice in craps to demonstrate the required format.
 
-```
+```{r}
 roll_dice <- function() {
   # Input: None
   # Output: an integer from 1:12
   # Description: Generate 2 random integers from 1 to 6 and sum them
 }
 ```
+##Function 1: roll_dice
+```{r}
+roll_dice <- function() {
+  # Input: None
+  # Output: an integer from 2 to 12
+  # Description: Generate 2 random integers from 1 to 6 (representing two dice) and return their sum.
+  sum(sample(1:6, 2, replace = TRUE))
+}
+```
+##Function 2: is_immediate_win
+```{r}
+is_immediate_win <- function(roll) {
+  # Input: An integer representing the sum of the dice (roll)
+  # Output: TRUE if the roll is an immediate win (7 or 11), FALSE otherwise
+  # Description: Check if the roll qualifies as an immediate win based on craps rules.
+  roll %in% c(7, 11)
+}
+```
+###Function 3: is_immediate_loss
+```{r}
+is_immediate_loss <- function(roll) {
+  # Input: An integer representing the sum of the dice (roll)
+  # Output: TRUE if the roll is an immediate loss (2, 3, or 12), FALSE otherwise
+  # Description: Check if the roll qualifies as an immediate loss based on craps rules.
+  roll %in% c(2, 3, 12)
+}
+```
+###Function 4: simulate_come_out_roll
+```{r}
+simulate_come_out_roll <- function() {
+  # Input: None
+  # Output: A list with two elements:
+  #         - roll: the result of the dice roll
+  #         - outcome: "win", "loss", or "continue"
+  # Description: Simulate the come-out roll and determine the outcome or establish a point.
+  roll <- roll_dice()
+  if (is_immediate_win(roll)) {
+    return(list(roll = roll, outcome = "win"))
+  } else if (is_immediate_loss(roll)) {
+    return(list(roll = roll, outcome = "loss"))
+  } else {
+    return(list(roll = roll, outcome = "continue"))
+  }
+}
+```
+### Function 5: simulate_point_roll
+```{r}
+simulate_point_roll <- function(point) {
+  # Input: An integer representing the established point
+  # Output: A list with two elements:
+  #         - roll: the result of the dice roll
+  #         - outcome: "win", "loss", or "continue"
+  # Description: Simulate rolling the dice in the point phase to determine the outcome.
+  roll <- roll_dice()
+  if (roll == point) {
+    return(list(roll = roll, outcome = "win"))
+  } else if (roll == 7) {
+    return(list(roll = roll, outcome = "loss"))
+  } else {
+    return(list(roll = roll, outcome = "continue"))
+  }
+}
+```
+### Function 6: summarize_game
+```{r}
+summarize_game <- function(game_data) {
+  # Input: A data frame containing the game rolls with columns:
+  #        - id: roll number
+  #        - roll: the result of the dice roll
+  #        - outcome: "win", "loss", or "continue"
+  # Output: A single-row data frame with columns:
+  #         - n_rolls: total number of rolls in the game
+  #         - outcome: final outcome ("win" or "loss")
+  #         - point: the established point, or NA if no point was set
+  # Description: Summarize the results of a single game of craps.
+  n_rolls <- nrow(game_data)
+  outcome <- tail(game_data$outcome, 1)
+  point <- if ("continue" %in% game_data$outcome) {
+    game_data$roll[game_data$outcome == "continue"][1]
+  } else {
+    NA
+  }
+  return(data.frame(n_rolls = n_rolls, outcome = outcome, point = point, stringsAsFactors = FALSE))
+}
+```
 
 Put each function in a separate code block.
 
 ## Planning Main Functions {#sec-main-function-diagram}
-
 Update your flowchart from @sec-flowchart to match the requirements of this section. 
 Your flowchart should have separate blocks for each function. 
 Which helper function(s) will be called inside each required function?
-
-<!-- Include a picture here using markdown image format. Save the picture in your repository and remember to commit it! -->
-
-## Simulating a full game {#sec-game-pseudocode}
-
-Fill in the pseudocode below to specify how you would return the single game data structure you created in @sec-single-game-data above. 
-Remember to fill in the input parameter inside the function definition as well as the comment.
-
-```
-simulate_craps_game <- function() {
-  # Input: 
-  # Output: 
-  # Description:
-}
-```
-
-## Summarizing a game {#sec-game-summary-pseudocode}
-
-Add a function that summarizes a game of craps (e.g. go from the data structure in @sec-single-game-data to the data structure in @sec-game-summary-data).
-
-```
-summarize_craps_game <- function() {
-  # Input: 
-  # Output: 
-  # Description:
-}
-```
-
-## Simulating many games {#sec-game-simulation-pseudocode}
-
-
-```
-run_craps_simulation <- function(N) {
-  # Input: an integer N which determines the number of games to simulate
-  # Output: 
-  # Description:
-}
-```
+![Craps Game Flowchart Main functions and Helper functions](Craps Game Flowchart Main functions and Helper functions.png)
 
 ## Planning for implementation
 
 What parts are still missing for you to write code implementing craps based on your pseudocode? 
+
+I try to implement most of the parts.
+
 What do you expect you will need to do before/during the coding process?
 Make a plan for next week's work. Where will you start?
+
+Now, I am going to move on to second part of the assignment .
+
+
 
