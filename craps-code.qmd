@@ -1,8 +1,9 @@
 ---
 title: "Craps Simulation"
 format: html
----
 
+---
+Author: "C.Martin Konou"
 
 In this document, you should create, code, and demonstrate each function you described in [`pseudocode.qmd`](pseudocode.qmd).
 File your functions under the appropriate header. 
@@ -14,63 +15,149 @@ Make sure this document compiles before you submit your answers.
 
 # Helper Functions
 
-## `roll_dice`
+## `Function 1: roll_dice`
 
 ```{r}
 roll_dice <- function() {
   # Input: None
-  # Output: an integer from 1:12
-  # Description: Generate 2 random integers from 1 to 6 and sum them
-  
-  sample(1:6, 2, replace = T) %>% sum()
+  # Output: an integer from 2 to 12
+  # Description: Generate 2 random integers from 1 to 6 (representing two dice) and return their sum.
+  sum(sample(1:6, 2, replace = TRUE))
 }
-```
 
-```{r}
-roll_dice()
 ```
-
 
 
 # Main Functions
 
-## `simulate_craps_game`
+## `Function 2: is_immediate_win`
 ```{r}
-simulate_craps_game <- function() {
-  # Input: 
-  # Output: 
-  # Description:
+is_immediate_win <- function(roll) {
+  # Input: An integer representing the sum of the dice (roll)
+  # Output: TRUE if the roll is an immediate win (7 or 11), FALSE otherwise
+  # Description: Check if the roll qualifies as an immediate win based on craps rules.
+  roll %in% c(7, 11)
+}
+```
+##`Function 3: is_immediate_loss`
+```{r}
+is_immediate_loss <- function(roll) {
+  # Input: An integer representing the sum of the dice (roll)
+  # Output: TRUE if the roll is an immediate loss (2, 3, or 12), FALSE otherwise
+  # Description: Check if the roll qualifies as an immediate loss based on craps rules.
+  roll %in% c(2, 3, 12)
 }
 ```
 
+## `Function 4: simulate_come_out_roll (With conditional probabilities)`
 ```{r}
-simulate_craps_game()
-```
-
-## `summarize_craps_game`
-```{r}
-summarize_craps_game <- function() {
-  # Input: 
-  # Output: 
-  # Description:
+simulate_come_out_roll <- function() {
+  # Input: None
+  # Output: A list with three elements:
+  #         - roll: the result of the dice roll
+  #         - outcome: "win", "loss", or "continue"
+  #         - prob: conditional probability of the outcome
+  roll <- roll_dice()
+  
+  if (is_immediate_win(roll)) {
+    prob <- 8 / 36 # Probability of rolling 7 or 11
+    print(paste("Roll:", roll, "- Outcome: win - Probability:", prob))
+    return(list(roll = roll, outcome = "win", prob = prob))
+  } else if (is_immediate_loss(roll)) {
+    prob <- 4 / 36 # Probability of rolling 2, 3, or 12
+    print(paste("Roll:", roll, "- Outcome: loss - Probability:", prob))
+    return(list(roll = roll, outcome = "loss", prob = prob))
+  } else {
+    prob <- 24 / 36 # Probability of rolling any other value
+    print(paste("Roll:", roll, "- Outcome: continue - Probability:", prob))
+    return(list(roll = roll, outcome = "continue", prob = prob))
+  }
 }
+# Simulate a come-out roll
+simulate_come_out_roll()
 ```
-
+`Function 5: simulate_point_roll (With conditional probabilities)`
 ```{r}
-simulate_craps_game() %>% summarize_craps_game()
-```
-
-## `run_craps_simulation`
-```{r}
-run_craps_simulation <- function(N) {
-  # Input: an integer N which determines the number of games to simulate
-  # Output: 
-  # Description:
+simulate_point_roll <- function(point) {
+  # Input: An integer representing the established point
+  # Output: A list with three elements:
+  #         - roll: the result of the dice roll
+  #         - outcome: "win", "loss", or "continue"
+  #         - prob: conditional probability of the outcome
+  roll <- roll_dice()
+  
+  if (roll == point) {
+    prob <- 1 / 6 # Approximate probability of hitting the point
+    return(list(roll = roll, outcome = "win", prob = prob))
+  } else if (roll == 7) {
+    prob <- 6 / 36 # Probability of rolling a 7
+    return(list(roll = roll, outcome = "loss", prob = prob))
+  } else {
+    prob <- (36 - 6 - 1) / 36 # Remaining probability for "continue"
+    return(list(roll = roll, outcome = "continue", prob = prob))
+  }
 }
+# Simulate a point roll for a specific point
+simulate_point_roll(point = 4)
+```
+
+## `Function 6: summarize_game (Include probability summary)`
+```{r}
+summarize_game <- function(game_data) {
+  # Input: A data frame containing the game rolls with columns:
+  #        - id: roll number
+  #        - roll: the result of the dice roll
+  #        - outcome: "win", "loss", or "continue"
+  #        - prob: probability of the outcome
+  # Output: A single-row data frame with columns:
+  #         - n_rolls: total number of rolls in the game
+  #         - outcome: final outcome ("win" or "loss")
+  #         - point: the established point, or NA if no point was set
+  #         - avg_prob: average probability of all outcomes
+
+  n_rolls <- nrow(game_data)
+  outcome <- tail(game_data$outcome, 1)
+  point <- if ("continue" %in% game_data$outcome) {
+    game_data$roll[game_data$outcome == "continue"][1]
+  } else {
+    NA
+  }
+  avg_prob <- mean(game_data$prob)
+
+  # Print roll-by-roll probabilities
+  print("Roll-by-roll outcomes and probabilities:")
+  for (i in 1:nrow(game_data)) {
+    print(paste(
+      "Roll ID:", game_data$id[i],
+      "- Roll:", game_data$roll[i],
+      "- Outcome:", game_data$outcome[i],
+      "- Probability:", game_data$prob[i]
+    ))
+  }
+
+  # Print overall summary
+  print(paste("Total rolls:", n_rolls))
+  print(paste("Final outcome:", outcome))
+  if (!is.na(point)) {
+    print(paste("Established point:", point))
+  }
+  print(paste("Average probability:", avg_prob))
+
+  return(data.frame(n_rolls = n_rolls, outcome = outcome, point = point, avg_prob = avg_prob, stringsAsFactors = FALSE))
+}
+
 ```
 
 ```{r}
-result <- run_craps_simulation(N=5) # demonstrate result
-result
+game_data <- data.frame(
+  id = 1:3,
+  roll = c(7, 4, 7),
+  outcome = c("win", "continue", "loss"),
+  prob = c(8/36, 24/36, 6/36)
+)
+
+# Summarize the game
+summarize_game(game_data)
+
 ```
 
