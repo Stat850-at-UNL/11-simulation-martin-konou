@@ -119,7 +119,7 @@ Draw/sketch a summary tabular data structure to store summary information from a
 Hint: Each game of craps should yield a single row in your table.
 
 <!-- Here you should include either a picture of your sketch or a markdown table -->
-![Craps Game Summary](CrapsGameSummary.png)
+![Craps Game Summary](CrapsGameSummary02.png)
 
 # Simulating a game of craps {#sec-simulation-pseudocode}
 
